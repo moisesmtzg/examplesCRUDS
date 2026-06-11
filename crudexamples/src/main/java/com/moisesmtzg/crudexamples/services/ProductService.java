@@ -1,6 +1,8 @@
 package com.moisesmtzg.crudexamples.services;
 
+import com.moisesmtzg.crudexamples.configurations.annotations.DatabaseRetry;
 import com.moisesmtzg.crudexamples.entities.Product;
+import com.moisesmtzg.crudexamples.configurations.exceptions.ResourceNotFoundException;
 import com.moisesmtzg.crudexamples.repositories.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -9,8 +11,12 @@ import org.springframework.util.ReflectionUtils;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
+/**
+ * Service for product that handle crud operations
+ * Using of ResourceNotFoundException in case no resource is found
+ *
+ */
 @Service
 public class ProductService {
 
@@ -25,6 +31,7 @@ public class ProductService {
         repository.deleteById(id);
     }
 
+    @DatabaseRetry
     public List<Product> getProducts(){
         return repository.findAll();
     }
@@ -33,8 +40,9 @@ public class ProductService {
         return repository.save(newProduct);
     }
 
-    public Optional<Product> findProduct(long id){
-        return repository.findById(id);
+    @DatabaseRetry
+    public Product findProduct(long id){
+        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("no resource found for that id:" + id));
     }
 
     public Product updateProduct(long id, Product p){
@@ -51,7 +59,7 @@ public class ProductService {
     }
 
     public Product patchProduct(long id, Map<String, Object> mapValues){
-        Product patchProduct = repository.findById(id).orElseThrow(() ->new RuntimeException("no product id matched"));
+        Product patchProduct = repository.findById(id).orElseThrow(() ->new ResourceNotFoundException("no product id matched for id:" + id));
         mapValues.forEach((key, value) ->{
             Field field = ReflectionUtils.findField(Product.class, key);
             if (field != null){
